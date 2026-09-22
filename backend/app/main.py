@@ -10,11 +10,11 @@ def root():
 
 try:
     @app.post("/api/products/upload")
-    def upload_photo(photo:UploadFile = File(...)):
+    async def upload_photo(photo:UploadFile = File(...)):
         return {
             "filename":photo.filename,
             "contenttype":photo.content_type,
             "message":"Product image received"
-        
             }
 except:
+    print("upload the photo")
