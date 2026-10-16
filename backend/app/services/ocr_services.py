@@ -1,12 +1,9 @@
 from paddleocr import PaddleOCR
-
-
 class OCRService:
     def __init__(self) -> None:
         self.ocr = PaddleOCR(lang="en", enable_mkldnn=False)
     def extract_text(self,image_path:str):
         print(f"Running OCR on: {image_path}")
-        
         result = self.ocr.predict(image_path)
         
         extracted_text = []
@@ -21,5 +18,7 @@ class OCRService:
                     "score":float(score),
                     "box":box.tolist(),
                 })
+        print(f"The OCR detected {len(extracted_text)} text regions")
         return extracted_text
+    
         
