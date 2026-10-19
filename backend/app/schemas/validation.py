@@ -9,7 +9,7 @@ class ValidationIssue(BaseModel):
 
 class ValidationResult(BaseModel):
     valid:bool
-    error:list[ValidationIssue]=Field(default_factory = list)
-    warning:list[ValidationIssue]=Field(default_factory = list)
+    errors:list[ValidationIssue]=Field(default_factory = list)
+    warnings:list[ValidationIssue]=Field(default_factory = list)
     decision:Literal["AUTO_APPROVE","REVIEW","REJECT"]="REVIEW"
 

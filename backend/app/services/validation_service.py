@@ -7,7 +7,7 @@ class ValidationService:
         errors:list[ValidationIssue]=[]
         warnings:list[ValidationIssue]=[]
         
-        if not product.product_name or product.product_name.strip():
+        if not product.product_name or not product.product_name.strip():
             errors.append(
                 ValidationIssue(
                     field="product_name",
@@ -17,7 +17,7 @@ class ValidationService:
                     
                 )
             )
-        if not product.brand or product.brand.strip():
+        if not product.brand or not product.brand.strip():
             warnings.append(
                 ValidationIssue(
                     field = "brand",
