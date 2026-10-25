@@ -1,25 +1,34 @@
-from pydantic import BaseModel,Field
-from typing import Optional,Any
+
+from pydantic import BaseModel, Field, ConfigDict
+
 
 class Identifiers(BaseModel):
-    barcode:Optional[str] = None
-    sku:Optional[str] = None
+    barcode: str | None = None
+    sku: str | None = None
 
-class Packsize(BaseModel):
-    value:Optional[int] = None
-    unit:Optional[str] = None
-    
+
+class PackSize(BaseModel):
+    value: float | None = None
+    unit: str | None = None
+
+
 class Product(BaseModel):
-    brand:Optional[str]=None
-    product_name:Optional[str]=None
-    category:Optional[str]=None
-    
-    pack_size:Packsize = Field(default_factory = Packsize)
-    mrp:Optional[float] = None
-    
-    ingredients:list[str] = Field(default_factory=list)
-    description:Optional[str] = None
-    
-    attributes:dict[str,Any] = Field(default_factory=dict)
-    
-    identifiers:Identifiers = Field(default_factory=Identifiers)
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
+    brand: str | None = None
+    product_name: str | None = None
+    category: str | None = None
+
+    pack_size: PackSize = Field(default_factory=PackSize)
+    mrp: float | None = None
+
+    ingredients: list[str] = Field(default_factory=list)
+    description: str | None = None
+
+    # Keep flexible while product extraction is evolving.
+    attributes: dict[str, object] = Field(default_factory=dict)
+
+    identifiers: Identifiers = Field(default_factory=Identifiers)

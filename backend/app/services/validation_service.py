@@ -14,7 +14,6 @@ class ValidationService:
                     code = "MISSING_PRODUCT_NAME",
                     message="Product name is required",
                     severity = "error"
-                    
                 )
             )
         if not product.brand or not product.brand.strip():

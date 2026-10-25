@@ -10,7 +10,7 @@ from backend.app.services.image_services import ImageService
 from backend.app.services.product_extraction_service import ProductExtractionService
 from backend.app.services.validation_service import ValidationService
 from backend.app.services.evidence_validation_service import EvidenceValidationService
-
+from backend.app.services.normalization_service import normalize_product_attributes
 
 app = FastAPI(title="catalog-lister",description="AI-powered product catalog automation system",version="0.1.0")
 
@@ -89,13 +89,13 @@ async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 
                     "error":"Image not saved"
                 }
 
-            ImageService.normalize_image(str(original_path), str(normalized_path))
+            async_image_service = await run_in_threadpool(ImageService.normalize_image,str(original_path), str(normalized_path))
         
             absolute_path = normalized_path.resolve()
     
             print(f"File size: {absolute_path.stat().st_size} bytes")
         
-            extracted_text = ocr_services.extract_text(str(absolute_path))
+            extracted_text = await run_in_threadpool(ocr_services.extract_text,str(absolute_path))
             
             all_ocr_results.append({
                 "image_number":index,
@@ -117,6 +117,7 @@ async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 
         except Exception:
             traceback.print_exc()
             raise
+        product.attributes = normalize_product_attributes(product.attributes)
         validation = validation_service.validate(product=product)
         evi_validation = evidence_validation_services.validate(product=product,ocr_text=combined_ocr_text)
         return {
