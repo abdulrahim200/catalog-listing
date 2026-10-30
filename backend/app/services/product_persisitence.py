@@ -26,5 +26,5 @@ class ProductPersistenceService:
         )
         db.add(db_product)
         db.commit()
-        db.refresh(db_product)
+        db.refresh(db_product) 
         return db_product

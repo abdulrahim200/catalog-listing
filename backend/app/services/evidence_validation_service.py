@@ -22,24 +22,37 @@ class EvidenceValidationResult(BaseModel):
     unsupported_fields: list[FieldEvidence] = Field(
         default_factory=list
     )
-def normalize_text(text:str)->str:
-    text = unicodedata.normalize("NFKD",text)
-    text = " ".join(char for char in text 
-                    if not unicodedata.combining(char))
-    text = text.casefold()
-    return re.sub(r"\s+"," ", text).strip()
-def product_name_is_supported(product_name:str,normalized_ocr:str)->bool:
-    normalized_name = normalize_text(product_name)
-    normalized_words = normalized_name.split()
-    if not normalized_words:
-        return False
-    if normalized_name in normalized_ocr:
-        return True
-    return all(
-          re.search(r"\b" + re.escape(word) + r"\b", normalized_ocr)
-        for word in normalized_words
+def normalize_text(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(
+        char for char in text
+        if not unicodedata.combining(char)
     )
-    
+    text = text.casefold()
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def product_name_is_supported(
+    product_name: str,
+    normalized_ocr: str,
+) -> bool:
+    normalized_name = normalize_text(product_name)
+    normalized_ocr = normalize_text(normalized_ocr)
+
+    words = normalized_name.split()
+
+    if not words:
+        return False
+
+    # Require every product-name word to match a complete OCR word.
+    for word in words:
+        pattern = r"\b" + re.escape(word) + r"\b"
+
+        if re.search(pattern, normalized_ocr) is None:
+            return False
+
+    return True
+
 class EvidenceValidationService:
         
     def validate(self,product:Product,ocr_text:str,)->EvidenceValidationResult:

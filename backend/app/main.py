@@ -1,6 +1,7 @@
 from typing import Annotated
+from uuid import UUID
 from starlette.concurrency import run_in_threadpool
-from fastapi import FastAPI,UploadFile,File,HTTPException
+from fastapi import FastAPI,UploadFile,File,HTTPException,Depends,Query
 from pathlib import Path
 import os
 import traceback
@@ -11,6 +12,11 @@ from backend.app.services.product_extraction_service import ProductExtractionSer
 from backend.app.services.validation_service import ValidationService
 from backend.app.services.evidence_validation_service import EvidenceValidationService
 from backend.app.services.normalization_service import normalize_product_attributes
+from sqlalchemy.orm import Session
+from backend.app.database import get_db
+from backend.app.services.product_persisitence import ProductPersistenceService
+from backend.app.models import ProductModel
+from backend.app.schemas.product_response import ProductResponse
 
 app = FastAPI(title="catalog-lister",description="AI-powered product catalog automation system",version="0.1.0")
 
@@ -47,7 +53,7 @@ def root():
         }
     },
 )
-async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 to 3 images at once",),):
+async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 to 3 images at once",),db:Session=Depends(get_db)):
     
     if not photos:
         raise HTTPException(
@@ -120,7 +126,16 @@ async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 
         product.attributes = normalize_product_attributes(product.attributes)
         validation = validation_service.validate(product=product)
         evi_validation = evidence_validation_services.validate(product=product,ocr_text=combined_ocr_text)
+        status_mapping = {
+            "AUTO_APPROVE":"APPROVED",
+            "REVIEW":"PENDING_REVIEW",
+            "REJECT":"REJECTED"
+        }
+        product_status = status_mapping[validation.decision]
+        saved_product = await run_in_threadpool(ProductPersistenceService.save_product,db,product,product_status)
         return {
+            "product_id":str(saved_product.id),
+            "status":saved_product.status,
             "image_count":len(photos),
             "product_info":product.model_dump(),
             "validation":validation.model_dump(),
@@ -137,3 +152,29 @@ async def upload_photo(photos:list[UploadFile] = File(...,description="Upload 2 
     finally:
         for photo in photos:
             await photo.close()
+
+@app.get("/api/products",response_model=list[ProductResponse])
+async def get_products(db:Session=Depends(get_db),
+                       limit:int = Query(default=20,ge=1,le=100),
+                       offset:int =Query(default=0,ge=0)):
+    try:
+        products = (db.query(ProductModel)
+                    .order_by(ProductModel.product_name.asc())
+                    .offset(offset)
+                    .limit(limit)
+                    .all()
+                    )
+    except: 
+        raise HTTPException(status_code=404,detail="Item Not Found")
+    return products
+@app.get("/api/products/{product_id}",response_model=ProductResponse)
+async def query_product(product_id:UUID,db:Session=Depends(get_db),):
+    products =  (db.query(ProductModel)
+                 .filter(ProductModel.id==product_id)
+                 .first())
+    if products is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found",
+        )
+    return products
